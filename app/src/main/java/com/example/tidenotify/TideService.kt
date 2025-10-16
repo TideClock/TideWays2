@@ -44,7 +44,11 @@ class TideService : Service() {
         val within = s % 10_800
         val dec = within / 1_080
         val microIndex = (within % 1_080) / 360
-        val symbol = when (microIndex) { 0 -> '-', 1 -> '*', else -> '+' }
+        val symbol = when (microIndex) {
+            0 -> '-'
+            1 -> '*'
+            else -> '+'
+        }
         return "$main.$dec$symbol"
     }
 
@@ -64,7 +68,7 @@ class TideService : Service() {
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setOngoing(true)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // show on lock screen
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .build()
 
     private fun notify(n: Notification) {
