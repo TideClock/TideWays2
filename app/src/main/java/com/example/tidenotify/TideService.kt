@@ -24,7 +24,7 @@ class TideService : Service() {
 
         val notif = buildNotification(tideStringNow())
 
-        // Start foreground immediately (required within ~5 seconds)
+        // Start foreground immediately
         if (Build.VERSION.SDK_INT >= 34) {
             ServiceCompat.startForeground(
                 this,
@@ -61,8 +61,8 @@ class TideService : Service() {
         val main = ((block + 7) % 8) + 1          // maps 0..7 -> 8,1..7
         val within = s % 10_800
         val dec = within / 1_080                  // 18-min tenths
-        val microIndex = (within % 1_080) / 360   // 6-min substeps
-        val symbol = when (microIndex) { 0 -> '-', 1 -> '*', else -> '+' }
+        val microIndex = (within % 1_080) / 360   // 6-min substeps (0..2)
+        val symbol = charArrayOf('-', '*', '+')[microIndex]
         return "$main.$dec$symbol"
     }
 
@@ -71,7 +71,6 @@ class TideService : Service() {
             val ch = NotificationChannel(
                 CHANNEL_ID,
                 "Tide (Live)",
-                // Use DEFAULT importance so it shows on lock screen by default
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply { description = "Shows tide code on the lock screen" }
             getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
@@ -85,7 +84,7 @@ class TideService : Service() {
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setOngoing(true)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // show on lock screen
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .build()
 
     private fun notify(n: Notification) {
@@ -93,7 +92,6 @@ class TideService : Service() {
     }
 
     companion object {
-        // NEW channel id (forces the system to use our new importance)
         private const val CHANNEL_ID = "tide_channel_v2"
         private const val NOTIF_ID = 1
     }
