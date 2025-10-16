@@ -3,15 +3,16 @@ package com.example.tidenotify
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import android.content.pm.PackageManager
-import android.content.Intent
 import java.time.LocalTime
 
 class MainActivity : AppCompatActivity() {
@@ -28,16 +29,22 @@ class MainActivity : AppCompatActivity() {
 
         ensureChannel()
 
+        // Always start the foreground service (permission affects *posting*, not starting)
+        startTideService()
+
+        // If we have POST_NOTIFICATIONS permission, show an immediate test notification.
+        // If not, request it, then show after grant.
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
             != PackageManager.PERMISSION_GRANTED
         ) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001)
         } else {
-            // Post a one-shot test notif so you see it immediately
             postTestNotification("Starting… ${tideStringNow()}")
-            startTideService()
         }
+
+        // Tap the text to open this app's notification settings quickly
+        tv.setOnClickListener { openAppNotificationSettings() }
     }
 
     override fun onRequestPermissionsResult(
@@ -48,18 +55,16 @@ class MainActivity : AppCompatActivity() {
             && grantResults[0] == PackageManager.PERMISSION_GRANTED
         ) {
             postTestNotification("Permission granted. ${tideStringNow()}")
-            startTideService()
         }
     }
 
     private fun ensureChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val mgr = getSystemService(NotificationManager::class.java)
             val ch = NotificationChannel(
-                CHANNEL_ID,
-                "Tide (Live)",
-                NotificationManager.IMPORTANCE_DEFAULT
+                CHANNEL_ID, "Tide (Live)", NotificationManager.IMPORTANCE_DEFAULT
             )
-            getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
+            mgr.createNotificationChannel(ch)
         }
     }
 
@@ -90,7 +95,13 @@ class MainActivity : AppCompatActivity() {
         return "$main.$dec$symbol"
     }
 
+    private fun openAppNotificationSettings() {
+        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+            .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+        startActivity(intent)
+    }
+
     companion object {
-        private const val CHANNEL_ID = "tide_channel_v2" // must match service
+        private const val CHANNEL_ID = "tide_channel_v3" // must match service
     }
 }
