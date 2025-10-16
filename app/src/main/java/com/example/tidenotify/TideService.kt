@@ -4,7 +4,6 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
-import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
@@ -17,7 +16,7 @@ import java.time.LocalTime
 class TideService : Service() {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    override fun onBind(intent: Intent?): IBinder? = null
+    override fun onBind(intent: android.content.Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -25,8 +24,7 @@ class TideService : Service() {
 
         val notif = buildNotification(tideStringNow())
 
-        // Start as a foreground service immediately (required within ~5s)
-        // On Android 14+, include the service type at runtime.
+        // Start foreground immediately (required within ~5 seconds)
         if (Build.VERSION.SDK_INT >= 34) {
             ServiceCompat.startForeground(
                 this,
@@ -42,13 +40,13 @@ class TideService : Service() {
             while (isActive) {
                 notify(buildNotification(tideStringNow()))
                 val now = System.currentTimeMillis()
-                val delayMs = 60_000L - (now % 60_000L) // align to minute
+                val delayMs = 60_000L - (now % 60_000L) // align to minute boundary
                 delay(delayMs)
             }
         }
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    override fun onStartCommand(intent: android.content.Intent?, flags: Int, startId: Int): Int {
         return START_STICKY
     }
 
@@ -64,11 +62,7 @@ class TideService : Service() {
         val within = s % 10_800
         val dec = within / 1_080                  // 18-min tenths
         val microIndex = (within % 1_080) / 360   // 6-min substeps
-        val symbol = when (microIndex) {
-            0 -> '-'
-            1 -> '*'
-            else -> '+'
-        }
+        val symbol = when (microIndex) { 0 -> '-', 1 -> '*', else -> '+' }
         return "$main.$dec$symbol"
     }
 
@@ -76,8 +70,8 @@ class TideService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val ch = NotificationChannel(
                 CHANNEL_ID,
-                "Tide",
-                // Use DEFAULT so it appears more prominently (incl. lock screen)
+                "Tide (Live)",
+                // Use DEFAULT importance so it shows on lock screen by default
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply { description = "Shows tide code on the lock screen" }
             getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
@@ -99,7 +93,8 @@ class TideService : Service() {
     }
 
     companion object {
-        private const val CHANNEL_ID = "tide_channel"
+        // NEW channel id (forces the system to use our new importance)
+        private const val CHANNEL_ID = "tide_channel_v2"
         private const val NOTIF_ID = 1
     }
 }
