@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
@@ -16,15 +17,16 @@ import java.time.LocalTime
 class TideService : Service() {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    override fun onBind(intent: android.content.Intent?): IBinder? = null
+    override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         createChannel()
+    }
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Build and show the initial notification ASAP (Android kills FGS if delayed)
         val notif = buildNotification(tideStringNow())
-
-        // Start foreground immediately
         if (Build.VERSION.SDK_INT >= 34) {
             ServiceCompat.startForeground(
                 this,
@@ -36,17 +38,15 @@ class TideService : Service() {
             startForeground(NOTIF_ID, notif)
         }
 
+        // Update once per minute (your value only changes every 6 minutes, but this is safe)
         scope.launch {
             while (isActive) {
                 notify(buildNotification(tideStringNow()))
                 val now = System.currentTimeMillis()
-                val delayMs = 60_000L - (now % 60_000L) // align to minute boundary
+                val delayMs = 60_000L - (now % 60_000L) // align to minute
                 delay(delayMs)
             }
         }
-    }
-
-    override fun onStartCommand(intent: android.content.Intent?, flags: Int, startId: Int): Int {
         return START_STICKY
     }
 
@@ -61,7 +61,7 @@ class TideService : Service() {
         val main = ((block + 7) % 8) + 1          // maps 0..7 -> 8,1..7
         val within = s % 10_800
         val dec = within / 1_080                  // 18-min tenths
-        val microIndex = (within % 1_080) / 360   // 6-min substeps (0..2)
+        val microIndex = (within % 1_080) / 360   // 6-min substeps 0..2
         val symbol = charArrayOf('-', '*', '+')[microIndex]
         return "$main.$dec$symbol"
     }
@@ -84,7 +84,7 @@ class TideService : Service() {
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setOngoing(true)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // show on lock screen
             .build()
 
     private fun notify(n: Notification) {
@@ -92,7 +92,7 @@ class TideService : Service() {
     }
 
     companion object {
-        private const val CHANNEL_ID = "tide_channel_v2"
+        private const val CHANNEL_ID = "tide_channel_v3" // NEW channel ID
         private const val NOTIF_ID = 1
     }
 }
