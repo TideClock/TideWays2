@@ -1,0 +1,45 @@
+name: Android CI (Debug APK)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Java 17
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # Install Gradle on the runner (no wrapper needed)
+      - name: Setup Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'   # AGP 8.7 requires Gradle 8.9
+
+      # Android SDK & packages
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android licenses
+        run: yes | sdkmanager --licenses
+
+      - name: Install SDK Platform & Build Tools
+        run: sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
+
+      # Build a SIGNED DEBUG APK (easy to install)
+      - name: Build Debug
+        run: gradle assembleDebug
+
+      # Upload the APK as a download
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: tide-notify-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
