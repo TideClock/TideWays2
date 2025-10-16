@@ -1,25 +1,39 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Runtime notif permission (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Base FGS permission -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Android 14: declare the specific FGS type permission that matches your service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
         android:allowBackup="true"
         android:label="@string/app_name"
         android:supportsRtl="true">
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
 
-        <!-- Keep the type -->
+        <!-- Foreground service type must match the permission above -->
         <service
             android:name=".TideService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- Quick Settings tile (optional but very handy on OnePlus) -->
+        <service
+            android:name=".TideTileService"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE"/>
+            </intent-filter>
+        </service>
     </application>
 </manifest>
